@@ -1,12 +1,27 @@
 const w = 1080;
 const h= 720;
-const xPad = 70;
-const yPad = 50;
-const xLeg = w - xPad - 250;
-const yLeg = yPad + 100;
+const xPad = 100;
+const yPad = 150;
+
+colors = ["#bfc9e2","#9bb9d9","#72a8cf","#4394c3","#1a7db6","#0667a1","#045281","#023858"];
+const legW = 250;
+const legH = 200 / colors.length;
+const xLeg = w - xPad - legW;
+const yLeg = yPad + legH;
 
 const tooltipW = 250;
 const tooltipH = 80;
+
+//Title
+d3.select('#chart')
+.append('h1')
+.attr('id','title')
+.text('United States Education Attainment')
+//Description
+d3.select('#chart')
+.append('p')
+.attr('id','description')
+.text("Percentage of adults 25 and older with a bachelor's degree or higher (2010-2014)");
 
 //Create svg element
 const svg = d3.select("#chart")
@@ -18,150 +33,122 @@ const svg = d3.select("#chart")
 const tooltip = d3.select("#chart")
 .append('div')
 .attr('id','tooltip')
-.style('height',tooltipH+'px')
-.style('width',tooltipW+'px');
+// .style('height',tooltipH+'px')
+// .style('width',tooltipW+'px');
 
 //Create legend element
 const legend = svg.append('g')
 .attr("id","legend");
-//legend label_1
-const legend_1 = legend.append('text')
-.attr('x',xLeg + 15).attr('y',h-yLeg)
-.text("No doping allegations")
-.attr('class','leg-label');
-const leg_marker_1 = legend.append('circle')
-.attr('cx',xLeg).attr('cy',h-yLeg-5).attr('r',5)
-.attr('class','leg-marker').attr('fill','#075985');
-//legend label_2
-const legend_2 = legend.append('text')
-.attr('x',xLeg + 15).attr('y',h-yLeg-20)
-.text("Riders with doping allegations")
-.attr('class','leg-label');
-const leg_marker_2 = legend.append('circle')
-.attr('cx',xLeg).attr('cy',h-yLeg-5-20).attr('r',5)
-.attr('class','leg-marker').attr('fill','#991b1b');
 
 
-//Labels
-svg.append('text')
-.attr('x', -h/2-yPad)
-.attr('y', 15)
-.text('Time (min)')
-.attr('transform','rotate(-90)')
-svg.append('text')
-.attr('x', w/2-xPad)
-.attr('y', h-10)
-.text('Year')
-//Title
-svg.append('text')
-.attr('id','title')
-.attr('x', w/2-xPad-40)
-.attr('y',20)
-.text('Doping in Professional Bicycle Racing')
-svg.append('text')
-.attr('id','sub-title')
-.attr('x', w/2-xPad)
-.attr('y',40)
-.text("35 Fastest times up Alpe d'Huez");
-
+//Make map
+const mapURL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json";
+//Data contains objects: { counties, nation, states}
+//Which contain the necessary geometries, we only need the conties
+const educationURL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json";
+//Data contains array of objects {fips,state,area_name,bachelorsOrHigher}
 //Fetch data
-//Data format [data_point0,data_point1,...]
-//data_point = {Time, Place, Seconds, Name, Year, Nationality, Doping, URL}
-//Time is in the format mm:ss and year is an int
-const quarters = {"01": "Q1", "04": "Q2", "07": "Q3", "10": "Q4"}
-d3.json("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json")
-    .then(data => {
-        //We can use the year directly
-        const years = data.map(item => item.Year);
-        
-        //Define time scale
-        const xMax = d3.max(years) + 1; //Add one year for padding
-        const xMin = d3.min(years) -1; //Subtract one year for padding
-        const xScale = d3.scaleLinear()
-        .domain([xMin,xMax])
-        .range([xPad,w-xPad]);
-        //Create x axis
-        const xAxis = d3.axisBottom().scale(xScale).tickFormat(d3.format('d'));
-        
-        //We need to parse the time
-        const records = data.map(item => {
-            const minSec = item.Time.split(':');
-            //Use Unix epoch as reference
-            return new Date(1970,0,1,0,minSec[0],minSec[1]);
-        });
-        // console.log(records[0]);
-        //Add 15sec padding for the y axis
-        const yMax = d3.max(records);
-        yMax.setSeconds(yMax.getSeconds()+15);
-        const yMin = d3.min(records);
-        yMin.setSeconds(yMin.getSeconds()-15)
-        const yScale = d3.scaleTime()
-        .domain([yMin,yMax])
-        // .domain(d3.extent(records)) //We could have used extent but we wouldn't have the padding
-        .range([h-yPad,yPad]);
-        //Create yAxis
-        const yAxis = d3.axisLeft().scale(yScale).tickFormat(d3.timeFormat('%M:%S'));
+Promise.all([d3.json(mapURL),d3.json(educationURL)])
+    .then(([map, education]) => {
+        //Create color scale
+        const percentages = education.map(item => item.bachelorsOrHigher);
+        const pMax = d3.max(percentages);
+        const pMin = d3.min(percentages);
 
-        //Insert axii
-        svg.append('g')
-        .call(xAxis)
-        .attr('id','x-axis')
-        .attr('transform',`translate(0,${h-yPad})`)
-        
-        svg.append('g')
-        .call(yAxis)
-        .attr('id','y-axis')
-        .attr('transform',`translate(${xPad},0)`);
-
-        //Create circles
-        //Set circle radius
-        const r = 10;
-        //Coloring function
-        function doping(s){
-            if(s.length > 0){
-                return '#991b1b95';
-            }else{
-                return '#07598595';
+        function quantize(min,max,count){
+            const arr = [];
+            const step = (max-min)/count;
+            for(let i=1; i<count; i++){
+                arr.push(min+i*step);
             }
+            return arr;
         }
 
-        svg.append('g')
-        .selectAll('.dot')
-        .data(records)
-        .enter()
-        .append('circle')
-        .attr('class','dot')
-        // .attr('data-date',(d,i)=> data.data[i][0])
-        // .attr('data-gdp',(d,i)=> data.data[i][1])
-        .attr('cx',(d,i)=>xScale(years[i]))
-        .attr('data-xvalue',(d,i)=>years[i])
-        .attr('cy',d => yScale(d))
-        .attr('data-yvalue',d=>d)
-        .attr('r',r)
-        .attr('fill',(d,i) => doping(data[i].Doping))
-        .attr('index',(d,i) => i)
+        const colorScale = d3.scaleThreshold()
+        .domain(quantize(pMin, pMax, colors.length)).range(colors);
+        const legScale = d3.scaleLinear()
+        .domain([pMin,pMax]).range([0,legW]);
+        //Create legend Axis
+        const legAxis = d3.axisBottom().scale(legScale)
+        .tickValues(colorScale.domain()).tickFormat(p => Math.round(p) + '%');
+        //Insert color bar
+        legend.append('g').selectAll('rect')
+        .data(
+            colorScale.range().map(color => {
+                //Invert the threshold
+                const bounds = colorScale.invertExtent(color);
+                //Check for endpoints
+                if(bounds[0]===null){
+                    bounds[0]=legScale.domain()[0];
+                }
+                if(bounds[1]==null){
+                    bounds[1]=legScale.domain()[1];
+                }
+                return bounds;
+            })
+        ).enter()//Insert rectangles
+        .append('rect')
+        .attr('fill',d => colorScale(d[0]))
+        .attr('x',d => legScale(d[0]))
+        .attr('width', d => d[0] && d[1] ? legScale(d[1])-legScale(d[0]) : legScale(null) )//Need to figure out how to calculate the width correctly
+        .attr('height',legH)
+        .attr('transform',`translate(${xLeg-xPad}, 0 )`);
+        //Append legend scale
+        legend.append('g').call(legAxis)
+        .attr('transform',`translate(${xLeg-xPad}, ${legH} )`);
+
+
+        //Create a geopath with d3
+        const path = d3.geoPath();
+        // draw the nation
+        const counties = topojson.feature(map,map.objects.counties).features;
+
+        svg.selectAll(".county")
+        .data(counties)
+        .enter().append('path')
+        .attr('class','county')
+        .attr('d',path)
+        .attr('data-fips',d => d.id)
+        .attr('data-education', d => {
+            //Check if there is data for that county
+            const record = education.filter( item => item.fips === d.id);
+            if(record[0]){
+                return record[0].bachelorsOrHigher;
+            }else{
+                console.log('Could not find data for: ', d.id);
+                return 0;
+            }
+        }).attr('fill', d => {
+            const record = education.filter( item => item.fips === d.id);
+            if(record[0]){
+                return colorScale(record[0].bachelorsOrHigher);
+            }else{
+                return colorScale(0);
+            }
+        }).attr('index',(d,i) => i)
         .on('mouseenter', function(event,d){
             const i = this.getAttribute('index');
-            
-            let x = parseFloat(this.getAttribute('cx'));
-            if( x < w - tooltipW - xPad){
-                x += xPad/2;
-            }else{
-                x -= (tooltipW+xPad/2);
-            }
-            let y = parseFloat(this.getAttribute('cy'));
-            if( y < h - tooltipH - yPad){
-                y += yPad/2;
-            }else{
-                y -= (tooltipH + yPad);
-            }
-            
-            tooltip.style('transform',`translate(${x}px,-${h-y}px)`)
-            .html(
-                data[i].Name + ': ' + data[i].Nationality + '<br>'
-                + 'Year: ' + data[i].Year + ', Time:' + data[i].Time
-                +'<br><br>' + data[i].Doping
-            ).attr("class","show").attr('data-year',(data[i].Year));
+                //Cannot get position from county directly, so we will use
+                //position of the mouse instead
+                let x = event.clientX;
+                let y = event.clientY;
+                tooltip.style('transform',`translate(${x-30}px,-${h-y+200}px)`)
+                .html( () => {
+                    const record = education.filter( item => item.fips === d.id);
+                    if(record[0]){
+                        return `${record[0].area_name} ,
+                        ${record[0].state}: ${record[0].bachelorsOrHigher}%`;
+                    }else{
+                        return 0;
+                    }
+            }).attr("class","show").attr('data-education',() =>{
+                const record = education.filter( item => item.fips === d.id);
+                if(record[0]){
+                    return record[0].bachelorsOrHigher;
+                }else{
+                    return 0;
+                }
+            });
         })
         .on('mouseleave', (d) =>{
             tooltip.attr("class","");

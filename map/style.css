@@ -1,6 +1,6 @@
-#title{
+#title, #description{
     color: #0f172a;
-    font-size: larger;
+    text-align: center;
 }
 
 #chart {
@@ -11,9 +11,11 @@
     position: relative;
     color: #0f172a;
     font-family: Helvetica, sans-serif;
+    width: max-content;
 }
 
 #tooltip{
+    width: max-content;
     border: 1px solid #475569;
     background-color: #cbd5e1;
     border-radius: 8px;
