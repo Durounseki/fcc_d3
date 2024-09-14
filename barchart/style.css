@@ -1,0 +1,44 @@
+#title{
+    color: #0f172a;
+    font-size: larger;
+}
+
+#chart {
+    padding: 30px 60px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid gray;
+    position: relative;
+    color: #0f172a;
+    font-family: Helvetica, sans-serif;
+}
+
+.bar{
+    fill: #075985;
+}
+
+.bar.active{
+    fill: #991b1b;
+}
+
+.hoverBar{
+    opacity: 0;
+}
+
+#tooltip{
+    border: 1px solid #475569;
+    background-color: #cbd5e1;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: right;
+    box-shadow: 2px 2px 5px #475569;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#tooltip.show{
+    opacity: 1;
+}
